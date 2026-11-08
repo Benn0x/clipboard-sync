@@ -3,6 +3,7 @@ package mdns
 import (
 	"strings"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/hashicorp/mdns"
 )
 
@@ -17,15 +18,15 @@ func GrabHostDevice() (bool, string, error) {
 	hostIp := ""
 	for _, entry := range entries {
 		splitEntry := strings.Split(entry.Info, ";")
-		for i := 0; i < len(splitEntry); i++ {
+		for i := range splitEntry {
 			infoEntry := splitEntry[i]
-			isHost := strings.TrimPrefix("host:", infoEntry)
-			ipAddress := strings.TrimPrefix("ip:", infoEntry)
+			isHost := strings.TrimPrefix(infoEntry, "host:")
+			ipAddress := strings.TrimPrefix(infoEntry, "ip:")
 			if isHost == "true" {
 				hostFound = true
 			}
 
-			if ipAddress != "" {
+			if ipAddress != "" && (validator.New().Var(ipAddress, "required,ip4_addr") == nil) {
 				hostIp = ipAddress
 			}
 		}
