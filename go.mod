@@ -3,6 +3,7 @@ module github.com/benn0x/clipboard-sync
 go 1.26.10
 
 require (
+	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/hashicorp/mdns v1.0.7 // indirect
 	github.com/miekg/dns v1.1.72 // indirect
 	golang.org/x/mod v0.31.0 // indirect

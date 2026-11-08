@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/mdns"
 )
 
-func AllowNetworkDiscovery() (*mdns.Server, error) {
+func AllowNetworkDiscovery(isHost bool) (*mdns.Server, error) {
 	host, err := os.Hostname()
 	if err != nil {
 		return nil, err
@@ -19,7 +19,7 @@ func AllowNetworkDiscovery() (*mdns.Server, error) {
 		return nil, err
 	}
 
-	info := []string{fmt.Sprintf("ip:%s", localAddress.IP.String())}
+	info := []string{fmt.Sprintf("ip:%s;host:%t", localAddress.IP.String(), isHost)}
 	service, err := mdns.NewMDNSService(host, SERVICE_NAME, "", "", SERVICE_PORT, nil, info)
 	if err != nil {
 		return nil, err
