@@ -6,6 +6,7 @@ import (
 	"github.com/hashicorp/mdns"
 )
 
+// Grabs a device that is known to be a host, or returns False in first argument if no device is found.
 func GrabHostDevice() (bool, string, error) {
 	entries, err := GrabNetworkDevices()
 	if err != nil {
@@ -37,6 +38,7 @@ func GrabHostDevice() (bool, string, error) {
 	return hostFound, hostIp, nil
 }
 
+// Grabs and returns a list of devices that are running the software on your network.
 func GrabNetworkDevices() ([]*mdns.ServiceEntry, error) {
 	entriesCh := make(chan *mdns.ServiceEntry, 4)
 	entries := []*mdns.ServiceEntry{}

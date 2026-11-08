@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/mdns"
 )
 
+// This broadcasts the MDNs device across the local network
 func AllowNetworkDiscovery(isHost bool) (*mdns.Server, error) {
 	host, err := os.Hostname()
 	if err != nil {
