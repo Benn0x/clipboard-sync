@@ -1,0 +1,1 @@
+In development clipboard tool that syncronizes clipboard contents across devices.
