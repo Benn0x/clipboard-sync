@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/mdns"
 )
 
+// Checks whether or not the device is already running the software
 func CheckIsDeviceRunningAlready(ip string) (bool, error) {
 	entries, err := ScanLocalDevices()
 	if err != nil {
@@ -30,6 +31,7 @@ func CheckIsDeviceRunningAlready(ip string) (bool, error) {
 	return false, nil
 }
 
+// Finds the host device information if it exists
 func FindHostDevice() (*mdns.ServiceEntry, string, error) {
 	entries, err := ScanLocalDevices()
 	if err != nil {
@@ -64,6 +66,7 @@ func FindHostDevice() (*mdns.ServiceEntry, string, error) {
 	return host, ip, nil
 }
 
+// Scans the local network for devices running the software
 func ScanLocalDevices() ([]*mdns.ServiceEntry, error) {
 	entriesCh := make(chan *mdns.ServiceEntry, 4)
 	listOfDevices := []*mdns.ServiceEntry{}

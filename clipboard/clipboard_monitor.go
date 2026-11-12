@@ -15,6 +15,7 @@ type ClipboardContent struct {
 	Bytes    []byte
 }
 
+// Starts the clipboard monitor, looking for changes
 func StartClipboardMonitor() {
 	ctx := context.Background()
 

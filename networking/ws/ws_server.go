@@ -18,6 +18,7 @@ type Hub struct {
 	unregister chan *Client
 }
 
+// Creates and returns a new Hub
 func newHub() *Hub {
 	return &Hub{
 		Broadcast:  make(chan []byte),
@@ -27,6 +28,7 @@ func newHub() *Hub {
 	}
 }
 
+// Starts the run loop
 func (h *Hub) run() {
 	var lastMessage string
 	for {
@@ -62,6 +64,7 @@ func (h *Hub) run() {
 	}
 }
 
+// Start monitoring the clipboard (host only)
 func StartCPMonitorHost(h *Hub) {
 	ctx := context.Background()
 
@@ -83,6 +86,7 @@ func StartCPMonitorHost(h *Hub) {
 	}
 }
 
+// Start a websocket server and have it run on the host
 func StartWebsocketServer() {
 	hub := newHub()
 	go hub.run()

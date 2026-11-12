@@ -13,6 +13,7 @@ type ClipboardContent struct {
 	Bytes    []byte
 }
 
+// Formats the clipboard data and puts it on the clipboard
 func ClipboardWrite(contents string) {
 	var clipboardFormatted ClipboardContent
 	err := json.Unmarshal([]byte(contents), &clipboardFormatted)

@@ -14,6 +14,7 @@ import (
 var conn *websocket.Conn
 var SendOverWS = make(chan string)
 
+// Listens for the WS communication.
 func ClipboardOverWS() {
 	for message := range SendOverWS {
 		fmt.Println("Sending clipboard contents over the network.")
@@ -24,6 +25,7 @@ func ClipboardOverWS() {
 	}
 }
 
+// Will connect to the websocket using information given by the MDNS registration
 func ConnectToWS(ip string) error {
 	url := fmt.Sprintf("ws://%s%s/ws", ip, WS_ADDR)
 	dialer := websocket.Dialer{}

@@ -13,6 +13,7 @@ const (
 var Encrypt = make(chan string)
 var Decrypt = make(chan []byte)
 
+// Sets up the encryption by applying passphrasing
 func Setup() {
 	passphrase := askForPassphrase()
 	passphraseBytes := []byte(passphrase)
@@ -39,6 +40,7 @@ func Setup() {
 	}()
 }
 
+// Encrypts the bytes given to it using a passphrase
 func encryptBytes(bytes []byte, passphrase []byte) ([]byte, error) {
 	encryptedBytes, err := encrypted.Encrypt(bytes, passphrase)
 	if err != nil {
@@ -48,6 +50,7 @@ func encryptBytes(bytes []byte, passphrase []byte) ([]byte, error) {
 	return encryptedBytes, err
 }
 
+// Decrypts the ciphertext given to it by a using a passphrase
 func decryptBytes(ciphertext []byte, passphrase []byte) ([]byte, error) {
 	decryptedBytes, err := encrypted.Decrypt(ciphertext, passphrase)
 	if err != nil {
@@ -57,6 +60,7 @@ func decryptBytes(ciphertext []byte, passphrase []byte) ([]byte, error) {
 	return decryptedBytes, err
 }
 
+// Prompts the user to enter a passphrase
 func askForPassphrase() string {
 	var passphrase string
 

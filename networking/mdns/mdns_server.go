@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/mdns"
 )
 
+// Checks whether a host exists on the network
 func hostOnNetwork() (bool, error) {
 	devices, err := ScanLocalDevices()
 	if err != nil {
@@ -27,6 +28,7 @@ func hostOnNetwork() (bool, error) {
 	return false, err
 }
 
+// Registers the device via MDNs for discovery over the local network
 func AllowDeviceDiscovery(ip string) (bool, *mdns.Server, error) {
 	hostname, err := os.Hostname()
 	if err != nil {
