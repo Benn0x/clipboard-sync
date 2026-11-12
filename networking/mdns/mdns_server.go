@@ -3,32 +3,51 @@ package mdns
 import (
 	"fmt"
 	"os"
+	"strings"
 
-	"github.com/benn0x/clipboard-sync/networking"
 	"github.com/hashicorp/mdns"
 )
 
-// This broadcasts the MDNs device across the local network
-func AllowNetworkDiscovery(isHost bool) (*mdns.Server, error) {
-	host, err := os.Hostname()
+func hostOnNetwork() (bool, error) {
+	devices, err := ScanLocalDevices()
 	if err != nil {
-		return nil, err
+		return false, err
+	}
+	for _, entry := range devices {
+		infoText := entry.Info
+		splitText := strings.Split(infoText, ";")
+		for _, text := range splitText {
+			host := strings.TrimPrefix(text, "host:")
+			if host == "true" {
+				return true, nil
+			}
+		}
 	}
 
-	localAddress, err := networking.GrabLocalIp()
+	return false, err
+}
+
+func AllowDeviceDiscovery(ip string) (bool, *mdns.Server, error) {
+	hostname, err := os.Hostname()
 	if err != nil {
-		return nil, err
+		return false, nil, fmt.Errorf("Hostname error %v", err)
+	}
+	host, err := hostOnNetwork()
+	if err != nil {
+		return !host, nil, err
+	}
+	info := []string{fmt.Sprintf("host:%t;ip:%s", !host, ip)}
+	service, err := mdns.NewMDNSService(hostname, SERVICE_NAME, "", "", SERVICE_PORT, nil, info)
+	if err != nil {
+		return !host, nil, fmt.Errorf("Service error %v", err)
 	}
 
-	info := []string{fmt.Sprintf("ip:%s;host:%t", localAddress.IP.String(), isHost)}
-	service, err := mdns.NewMDNSService(host, SERVICE_NAME, "", "", SERVICE_PORT, nil, info)
-	if err != nil {
-		return nil, err
-	}
-
-	server, _ := mdns.NewServer(&mdns.Config{
+	server, err := mdns.NewServer(&mdns.Config{
 		Zone: service,
 	})
+	if err != nil {
+		return !host, nil, fmt.Errorf("Server error %v", err)
+	}
 
-	return server, nil
+	return !host, server, nil
 }

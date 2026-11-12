@@ -3,33 +3,51 @@ package main
 import (
 	"fmt"
 
+	"github.com/benn0x/clipboard-sync/networking"
 	"github.com/benn0x/clipboard-sync/networking/mdns"
-	"github.com/benn0x/clipboard-sync/networking/websocket"
+	"github.com/benn0x/clipboard-sync/networking/ws"
+	"github.com/benn0x/clipboard-sync/security"
+	"golang.design/x/clipboard"
+
+	clip "github.com/benn0x/clipboard-sync/clipboard"
 )
 
 func main() {
-	// Check whether there are any known hosts already
-	hasHost, hostIp, err := mdns.GrabHostDevice()
-	if err != nil {
+	if err := clipboard.Init(); err != nil {
 		fmt.Println(err)
+		panic(0)
 	}
 
-	// Allows the device to be discovered locally
-	mdnsServer, err := mdns.AllowNetworkDiscovery(!hasHost)
+	ip, err := networking.GrabLocalAddress()
 	if err != nil {
 		fmt.Println(err)
+		panic(0)
 	}
 
-	defer mdnsServer.Shutdown() // Stops the device from cancelling the broadcast
+	host, server, err := mdns.AllowDeviceDiscovery(ip)
+	if err != nil {
+		fmt.Println(err)
+		panic(0)
+	}
+	defer server.Shutdown()
 
-	// Checks if the device is a host or not.
-	if !hasHost {
-		// Starts the websocket connection
-		if err := websocket.HostWebsocket(); err != nil {
-			fmt.Println("ListenAndServe: ", err)
-		}
+	security.Setup()
+
+	if host {
+		ws.StartWebsocketServer()
 	} else {
-		// Tries to connect to the websocket being ran
-		fmt.Println("This device is not currently a host, attempting to connect to", hostIp)
+		_, ip, err := mdns.FindHostDevice()
+		if err != nil {
+			fmt.Println(err)
+		} else {
+			fmt.Println("Host ip address: ", ip)
+			err := ws.ConnectToWS(ip)
+			if err != nil {
+				fmt.Println(err)
+			} else {
+				go clip.StartClipboardMonitor()
+				ws.ClipboardOverWS()
+			}
+		}
 	}
 }
