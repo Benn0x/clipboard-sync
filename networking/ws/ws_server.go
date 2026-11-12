@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
+	"time"
 
 	clip "github.com/benn0x/clipboard-sync/clipboard/write"
 	"github.com/benn0x/clipboard-sync/security"
@@ -86,13 +88,72 @@ func StartCPMonitorHost(h *Hub) {
 	}
 }
 
+type ipEntry struct {
+	IpAddress string
+	Count     int
+}
+
 // Start a websocket server and have it run on the host
 func StartWebsocketServer() {
 	hub := newHub()
 	go hub.run()
 	go StartCPMonitorHost(hub)
+	ipConnectionLogs := []ipEntry{}
+	ticker := time.NewTicker(1 * time.Minute)
+
+	go func() {
+		for range ticker.C {
+			ipConnectionLogs = []ipEntry{}
+		}
+	}()
+
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-		serveWs(hub, w, r)
+		authHeader := r.Header.Get("Authorization")
+		userIp, _, err := net.SplitHostPort(r.RemoteAddr)
+		found := false
+		if err != nil {
+			http.Error(w, "Internal Server Error", 500)
+			fmt.Printf("Rate limit error: %v\n", err)
+			return
+		}
+
+		if len(authHeader) > 0 {
+			security.Decrypt <- []byte(authHeader)
+			decryptedMessage := <-security.Decrypt
+			if string(decryptedMessage) == security.FAILED_DECRYPTION_MESSAGE {
+				http.Error(w, "Unauthorized", 401)
+				fmt.Printf("Unauthorized connection attempt from %s\n", userIp)
+				return
+			}
+
+			userCount := 1
+			for _, entry := range ipConnectionLogs {
+				if entry.IpAddress == userIp {
+					entry.Count += 1
+					userCount = entry.Count
+					found = true
+				}
+			}
+
+			if !found {
+				ipConnectionLogs = append(ipConnectionLogs, ipEntry{
+					IpAddress: userIp,
+					Count:     1,
+				})
+			}
+
+			if userCount < 2 {
+				http.Error(w, "Too Many Requests", 429)
+				fmt.Printf("Rate limit exceeded for IP: %s\n", userIp)
+				return
+			}
+
+			serveWs(hub, w, r)
+		} else {
+			http.Error(w, "Unauthorized", 401)
+			fmt.Printf("Unauthorized connection attempt from %s\n", userIp)
+			return
+		}
 	})
 	err := http.ListenAndServe(WS_ADDR, nil)
 	if err != nil {

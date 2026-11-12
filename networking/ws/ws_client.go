@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/benn0x/clipboard-sync/security"
 	"github.com/gorilla/websocket"
 )
 
@@ -101,26 +100,11 @@ func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	authHeader := r.Header.Get("Authorization")
-	if len(authHeader) > 0 {
-		security.Decrypt <- []byte(authHeader)
-		decryptedMessage := <-security.Decrypt
-		if string(decryptedMessage) == security.FAILED_DECRYPTION_MESSAGE {
-			conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "Couldn't verify passphrase."))
-			conn.Close()
-			return
-		}
+	client := &Client{hub: hub, conn: conn, send: make(chan []byte, 256)}
+	client.hub.register <- client
 
-		client := &Client{hub: hub, conn: conn, send: make(chan []byte, 256)}
-		client.hub.register <- client
-
-		// Allow collection of memory referenced by the caller by doing all work in
-		// new goroutines.
-		go client.writePump()
-		go client.readPump()
-	} else {
-		conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "Couldn't verify passphrase."))
-		conn.Close()
-		return
-	}
+	// Allow collection of memory referenced by the caller by doing all work in
+	// new goroutines.
+	go client.writePump()
+	go client.readPump()
 }
