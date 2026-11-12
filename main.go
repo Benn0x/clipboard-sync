@@ -15,19 +15,28 @@ import (
 func main() {
 	if err := clipboard.Init(); err != nil {
 		fmt.Println(err)
-		panic(0)
+		return
 	}
 
 	ip, err := networking.GrabLocalAddress()
 	if err != nil {
 		fmt.Println(err)
-		panic(0)
+		return
+	}
+
+	if running, err := mdns.CheckIsDeviceRunningAlready(ip); running {
+		fmt.Println("This device is already running this software.")
+		return
+	} else if err != nil {
+		fmt.Println(err)
+		fmt.Println("We couldn't verify whether or not your device is already running this software.")
+		return
 	}
 
 	host, server, err := mdns.AllowDeviceDiscovery(ip)
 	if err != nil {
 		fmt.Println(err)
-		panic(0)
+		return
 	}
 	defer server.Shutdown()
 

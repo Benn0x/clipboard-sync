@@ -1,23 +1,26 @@
 package ws
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 
-	clipboard "github.com/benn0x/clipboard-sync/clipboard/write"
+	clip "github.com/benn0x/clipboard-sync/clipboard/write"
 	"github.com/benn0x/clipboard-sync/security"
+	"golang.design/x/clipboard"
 )
 
 type Hub struct {
 	clients    map[*Client]bool
-	broadcast  chan []byte
+	Broadcast  chan []byte
 	register   chan *Client
 	unregister chan *Client
 }
 
 func newHub() *Hub {
 	return &Hub{
-		broadcast:  make(chan []byte),
+		Broadcast:  make(chan []byte),
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
 		clients:    make(map[*Client]bool),
@@ -35,11 +38,12 @@ func (h *Hub) run() {
 				delete(h.clients, client)
 				close(client.send)
 			}
-		case message := <-h.broadcast:
+		case message := <-h.Broadcast:
 			security.Decrypt <- message
 			decryptedMessage := <-security.Decrypt
+			fmt.Println(fmt.Sprintf("Updating clipboard contents for %d clients.", len(h.clients)))
 
-			clipboard.ClipboardWrite(string(decryptedMessage))
+			clip.ClipboardWrite(string(decryptedMessage))
 			for client := range h.clients {
 				select {
 				case client.send <- []byte(message):
@@ -52,9 +56,31 @@ func (h *Hub) run() {
 	}
 }
 
+func StartCPMonitorHost(h *Hub) {
+	ctx := context.Background()
+
+	for data := range clipboard.Watch(ctx) {
+		clipboardFormatted := clip.ClipboardContent{
+			DataType: int(data.Format),
+			Bytes:    data.Bytes,
+		}
+
+		bytes, err := json.Marshal(clipboardFormatted)
+		if err != nil {
+			fmt.Println(fmt.Errorf("Couldn't process clipboard data: %v", err))
+		} else {
+			security.Encrypt <- string(bytes)
+			encryptedClipboard := <-security.Encrypt
+
+			h.Broadcast <- []byte(encryptedClipboard)
+		}
+	}
+}
+
 func StartWebsocketServer() {
 	hub := newHub()
 	go hub.run()
+	go StartCPMonitorHost(hub)
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		serveWs(hub, w, r)
 	})

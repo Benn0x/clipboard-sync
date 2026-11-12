@@ -7,6 +7,29 @@ import (
 	"github.com/hashicorp/mdns"
 )
 
+func CheckIsDeviceRunningAlready(ip string) (bool, error) {
+	entries, err := ScanLocalDevices()
+	if err != nil {
+		fmt.Println(err)
+		return false, err
+	}
+
+	for _, entry := range entries {
+		text := entry.Info
+		textSplit := strings.Split(text, ";")
+		for _, s := range textSplit {
+			ipValue, isIpFound := strings.CutPrefix(s, "ip:")
+			if isIpFound {
+				if ipValue == ip {
+					return true, nil
+				}
+			}
+		}
+	}
+
+	return false, nil
+}
+
 func FindHostDevice() (*mdns.ServiceEntry, string, error) {
 	entries, err := ScanLocalDevices()
 	if err != nil {
