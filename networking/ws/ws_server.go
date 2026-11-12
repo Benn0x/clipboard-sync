@@ -28,6 +28,7 @@ func newHub() *Hub {
 }
 
 func (h *Hub) run() {
+	var lastMessage string
 	for {
 		select {
 		case client := <-h.register:
@@ -41,7 +42,10 @@ func (h *Hub) run() {
 		case message := <-h.Broadcast:
 			security.Decrypt <- message
 			decryptedMessage := <-security.Decrypt
-			fmt.Println(fmt.Sprintf("Updating clipboard contents for %d clients.", len(h.clients)))
+			if lastMessage == string(decryptedMessage) {
+				continue
+			}
+			fmt.Printf("Updating clipboard contents for %d clients.\n", len(h.clients))
 
 			clip.ClipboardWrite(string(decryptedMessage))
 			for client := range h.clients {
@@ -52,6 +56,8 @@ func (h *Hub) run() {
 					delete(h.clients, client)
 				}
 			}
+
+			lastMessage = string(decryptedMessage)
 		}
 	}
 }

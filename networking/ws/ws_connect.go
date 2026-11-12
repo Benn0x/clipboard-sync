@@ -4,7 +4,9 @@ import (
 	"crypto/rand"
 	"fmt"
 	"net/http"
+	"time"
 
+	clipboard "github.com/benn0x/clipboard-sync/clipboard/write"
 	"github.com/benn0x/clipboard-sync/security"
 	"github.com/gorilla/websocket"
 )
@@ -43,6 +45,34 @@ func ConnectToWS(ip string) error {
 		if err != nil {
 			if closeErr, ok := err.(*websocket.CloseError); ok {
 				fmt.Println(fmt.Errorf("Connection closed with code %d: %s", closeErr.Code, closeErr.Text))
+			}
+		}
+
+		go func() {
+			ticker := time.NewTicker(PING_PERIOD)
+			defer ticker.Stop()
+
+			for range ticker.C {
+				err := conn.WriteMessage(websocket.PingMessage, nil)
+				if err != nil {
+					fmt.Println("Connection lost:", err)
+					break
+				}
+			}
+		}()
+
+		for {
+			messageType, message, err := conn.ReadMessage()
+			if err != nil {
+				fmt.Println(err)
+
+				if closeErr, ok := err.(*websocket.CloseError); ok {
+					fmt.Println(fmt.Errorf("Connection closed with code %d: %s", closeErr.Code, closeErr.Text))
+				}
+			} else if messageType == websocket.TextMessage {
+				security.Decrypt <- message
+				message = <-security.Decrypt
+				clipboard.ClipboardWrite(string(message))
 			}
 		}
 	}()
