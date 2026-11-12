@@ -25,7 +25,6 @@ func StartClipboardMonitor() {
 		}
 
 		bytes, err := json.Marshal(clipboardFormatted)
-		fmt.Println(string(bytes), clipboardFormatted)
 		if err != nil {
 			fmt.Println(fmt.Errorf("Couldn't process clipboard data: %v", err))
 		} else {
