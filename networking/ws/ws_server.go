@@ -99,7 +99,7 @@ func StartWebsocketServer() {
 	go hub.run()
 	go StartCPMonitorHost(hub)
 	ipConnectionLogs := []ipEntry{}
-	ticker := time.NewTicker(1 * time.Minute)
+	ticker := time.NewTicker(CONN_RATE_LIMIT_RESET)
 
 	go func() {
 		for range ticker.C {
@@ -127,10 +127,10 @@ func StartWebsocketServer() {
 			}
 
 			userCount := 1
-			for _, entry := range ipConnectionLogs {
+			for i, entry := range ipConnectionLogs {
 				if entry.IpAddress == userIp {
-					entry.Count += 1
-					userCount = entry.Count
+					ipConnectionLogs[i].Count += 1
+					userCount = ipConnectionLogs[i].Count
 					found = true
 				}
 			}
@@ -142,7 +142,7 @@ func StartWebsocketServer() {
 				})
 			}
 
-			if userCount < 2 {
+			if userCount > CONN_RATE_LIMIT {
 				http.Error(w, "Too Many Requests", 429)
 				fmt.Printf("Rate limit exceeded for IP: %s\n", userIp)
 				return
