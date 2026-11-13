@@ -17,7 +17,7 @@ var conn *websocket.Conn
 var SendOverWS = make(chan string)
 
 func restartAppOnHostClosure(err error) {
-	fmt.Printf("Started restart process due to: %v", err)
+	fmt.Printf("Started restart process due to: %v\n", err)
 
 	exe, err := os.Executable()
 	if err != nil {
@@ -73,16 +73,6 @@ func ConnectToWS(ip string) error {
 	}
 
 	go func() {
-		_, _, err = conn.ReadMessage()
-		if err != nil {
-			if closeErr, ok := err.(*websocket.CloseError); ok {
-				if closeErr.Code == 1006 {
-					restartAppOnHostClosure(fmt.Errorf("Host is no longer available to read from."))
-				}
-				restartAppOnHostClosure(fmt.Errorf("Connection closed with code %d: %s", closeErr.Code, closeErr.Text))
-			}
-		}
-
 		go func() {
 			ticker := time.NewTicker(PING_PERIOD)
 			defer ticker.Stop()
@@ -97,6 +87,12 @@ func ConnectToWS(ip string) error {
 		}()
 
 		for {
+			err := conn.WriteMessage(websocket.PingMessage, nil)
+			if err != nil {
+				restartAppOnHostClosure(fmt.Errorf("Host is no longer available to read from."))
+				break
+			}
+
 			messageType, message, err := conn.ReadMessage()
 			if err != nil {
 				if closeErr, ok := err.(*websocket.CloseError); ok {

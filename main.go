@@ -14,7 +14,7 @@ import (
 	clip "github.com/benn0x/clipboard-sync/clipboard"
 )
 
-const VERSION string = "1.0.0"
+const VERSION string = "1.0.1"
 const VERSION_LISTING string = "https://raw.githubusercontent.com/Benn0x/clipboard-sync/refs/heads/development/version"
 
 func main() {
