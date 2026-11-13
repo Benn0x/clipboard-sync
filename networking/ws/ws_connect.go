@@ -54,6 +54,9 @@ func ConnectToWS(ip string) error {
 		_, _, err = conn.ReadMessage()
 		if err != nil {
 			if closeErr, ok := err.(*websocket.CloseError); ok {
+				if closeErr.Code == 1006 {
+					panic(fmt.Errorf("Host is no longer available to read from."))
+				}
 				panic(fmt.Errorf("Connection closed with code %d: %s", closeErr.Code, closeErr.Text))
 			}
 		}
@@ -75,6 +78,9 @@ func ConnectToWS(ip string) error {
 			messageType, message, err := conn.ReadMessage()
 			if err != nil {
 				if closeErr, ok := err.(*websocket.CloseError); ok {
+					if closeErr.Code == 1006 {
+						panic(fmt.Errorf("Host is no longer available to read from."))
+					}
 					panic(fmt.Errorf("Connection closed with code %d: %s", closeErr.Code, closeErr.Text))
 				}
 			} else if messageType == websocket.TextMessage {

@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"io"
+	"net/http"
 
 	"github.com/benn0x/clipboard-sync/networking"
 	"github.com/benn0x/clipboard-sync/networking/mdns"
@@ -12,7 +14,28 @@ import (
 	clip "github.com/benn0x/clipboard-sync/clipboard"
 )
 
+const VERSION string = "1.0.0"
+const VERSION_LISTING string = "https://raw.githubusercontent.com/Benn0x/clipboard-sync/refs/heads/development/version"
+
 func main() {
+	resp, err := http.Get(VERSION_LISTING)
+	if err != nil {
+		fmt.Printf("Couldn't check if an update was available. %v\n", err)
+	} else {
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			fmt.Printf("Couldn't check if an update was available. %v\n", err)
+		} else {
+			latest_version := string(body)
+			if latest_version != VERSION {
+				fmt.Printf("You don't have the most up-to-date version of the software. %s -> %s\n", VERSION, latest_version)
+				fmt.Printf("You can download the newest version @ https://github.com/Benn0x/clipboard-sync/releases/latest\n")
+			} else {
+				fmt.Printf("Your current version (%s) is up to date.\n", VERSION)
+			}
+		}
+	}
+
 	if err := clipboard.Init(); err != nil {
 		fmt.Println(err)
 		return
