@@ -36,17 +36,28 @@ func ConnectToWS(ip string) error {
 
 	header.Set("Authorization", authorizationHeader)
 
-	connection, _, err := dialer.Dial(url, header)
+	connection, response, err := dialer.Dial(url, header)
 	conn = connection
 	if err != nil {
+		switch response.StatusCode {
+		case http.StatusUnauthorized:
+			return fmt.Errorf("Unauthorized access. Please check your passphrase.")
+		case http.StatusTooManyRequests:
+			return fmt.Errorf("Rate limit exceeded. Please try again in a few minutes.")
+		}
 		return fmt.Errorf("Dial error: %v", err)
+	} else {
+		fmt.Printf("Connected to host %s\n", ip)
 	}
 
 	go func() {
 		_, _, err = conn.ReadMessage()
 		if err != nil {
 			if closeErr, ok := err.(*websocket.CloseError); ok {
-				fmt.Println(fmt.Errorf("Connection closed with code %d: %s", closeErr.Code, closeErr.Text))
+				if closeErr.Code == 1006 {
+					panic(fmt.Errorf("Host is no longer available to read from."))
+				}
+				panic(fmt.Errorf("Connection closed with code %d: %s", closeErr.Code, closeErr.Text))
 			}
 		}
 
@@ -66,10 +77,11 @@ func ConnectToWS(ip string) error {
 		for {
 			messageType, message, err := conn.ReadMessage()
 			if err != nil {
-				fmt.Println(err)
-
 				if closeErr, ok := err.(*websocket.CloseError); ok {
-					fmt.Println(fmt.Errorf("Connection closed with code %d: %s", closeErr.Code, closeErr.Text))
+					if closeErr.Code == 1006 {
+						panic(fmt.Errorf("Host is no longer available to read from."))
+					}
+					panic(fmt.Errorf("Connection closed with code %d: %s", closeErr.Code, closeErr.Text))
 				}
 			} else if messageType == websocket.TextMessage {
 				security.Decrypt <- message

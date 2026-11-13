@@ -9,6 +9,9 @@ const (
 	MAX_MESSAGE_SIZE int           = 16 * 1024 * 1024
 
 	WS_ADDR string = ":8080"
+
+	CONN_RATE_LIMIT                     = 3
+	CONN_RATE_LIMIT_RESET time.Duration = 1 * time.Minute
 )
 
 var (

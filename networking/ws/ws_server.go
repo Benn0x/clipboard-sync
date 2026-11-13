@@ -36,10 +36,19 @@ func (h *Hub) run() {
 	for {
 		select {
 		case client := <-h.register:
+			ip, _, err := net.SplitHostPort(client.conn.RemoteAddr().String())
+			if err != nil {
+				client.conn.Close()
+				fmt.Printf("Client dropped, couldn't get IP. Error:  %v\n", err)
+				continue
+			}
+			client.ip = ip
 			h.clients[client] = true
-			fmt.Println("New client connected to the websocket.")
+			fmt.Printf("New client connected to the websocket. Client ip: %s\n", ip)
 		case client := <-h.unregister:
 			if _, ok := h.clients[client]; ok {
+				fmt.Printf("Client disconnected from the websocket. Client ip: %s\n", client.ip)
+
 				delete(h.clients, client)
 				close(client.send)
 			}
@@ -99,7 +108,7 @@ func StartWebsocketServer() {
 	go hub.run()
 	go StartCPMonitorHost(hub)
 	ipConnectionLogs := []ipEntry{}
-	ticker := time.NewTicker(1 * time.Minute)
+	ticker := time.NewTicker(CONN_RATE_LIMIT_RESET)
 
 	go func() {
 		for range ticker.C {
@@ -127,10 +136,10 @@ func StartWebsocketServer() {
 			}
 
 			userCount := 1
-			for _, entry := range ipConnectionLogs {
+			for i, entry := range ipConnectionLogs {
 				if entry.IpAddress == userIp {
-					entry.Count += 1
-					userCount = entry.Count
+					ipConnectionLogs[i].Count += 1
+					userCount = ipConnectionLogs[i].Count
 					found = true
 				}
 			}
@@ -142,7 +151,7 @@ func StartWebsocketServer() {
 				})
 			}
 
-			if userCount < 2 {
+			if userCount > CONN_RATE_LIMIT {
 				http.Error(w, "Too Many Requests", 429)
 				fmt.Printf("Rate limit exceeded for IP: %s\n", userIp)
 				return
@@ -155,6 +164,7 @@ func StartWebsocketServer() {
 			return
 		}
 	})
+	fmt.Println("Device now available for client connections.")
 	err := http.ListenAndServe(WS_ADDR, nil)
 	if err != nil {
 		fmt.Println(fmt.Errorf("ListenAndServer: %v", err))

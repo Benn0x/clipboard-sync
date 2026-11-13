@@ -1,8 +1,13 @@
 package security
 
 import (
+	"errors"
 	"fmt"
+	"os"
+	"path"
+	"strings"
 
+	gochoice "github.com/TwiN/go-choice"
 	"github.com/secure-systems-lab/go-securesystemslib/encrypted"
 )
 
@@ -13,11 +18,55 @@ const (
 var Encrypt = make(chan string)
 var Decrypt = make(chan []byte)
 
+// Creates the file and store passphrase within it
+func createPassphraseFile(passphrasePath string, passphrase string) {
+	folder, _, _ := strings.Cut(passphrasePath, "passphrase.txt")
+	if err := os.MkdirAll(folder, 0700); err != nil {
+		fmt.Printf("Error during creation of passphrase file. Error: %v\n", err)
+	} else {
+		file, err := os.Create(passphrasePath)
+		if err != nil {
+			fmt.Printf("Error during creation of passphrase file. Error: %v\n", err)
+		} else {
+			if _, err := file.Write([]byte(passphrase)); err != nil {
+				fmt.Printf("Error during storing passphrase. Error: %v\n", err)
+			}
+		}
+	}
+}
+
+// Grab the saved passphrase
+func grabPassphraseSaved(passphrasePath string) string {
+	bytes, err := os.ReadFile(passphrasePath)
+	if err != nil {
+		fmt.Printf("Couldn't read the passphrase saved. Error: %v\n", err)
+	} else {
+		return string(bytes)
+	}
+	return ""
+}
+
 // Sets up the encryption by applying passphrasing
 func Setup() {
-	passphrase := askForPassphrase()
+	passphraseLocation, err := os.UserConfigDir()
+	if err != nil {
+		fmt.Printf("Error during finding passphrase save location: %v\n", err)
+	}
+	passphraseLocation = path.Join(passphraseLocation, "clipboard-sync", "passphrase.txt")
+
+	var passphrase string
+	_, err = os.Stat(passphraseLocation)
+	if errors.Is(err, os.ErrNotExist) {
+		passphrase = askForPassphrase()
+		savePassphrase := askShouldSavePassphrase()
+		if savePassphrase == "Yes" {
+			createPassphraseFile(passphraseLocation, passphrase)
+		}
+	} else {
+		passphrase = grabPassphraseSaved(passphraseLocation)
+	}
+
 	passphraseBytes := []byte(passphrase)
-	// fmt.Printf("Verified your passphrase as: %s\n", passphrase)
 
 	go func() {
 		for text := range Encrypt {
@@ -72,4 +121,24 @@ func askForPassphrase() string {
 		fmt.Println("Your passphrase must be atleast 8 characters.")
 		return askForPassphrase()
 	}
+}
+
+// Prompts the user to see if they want to save the passphrase
+func askShouldSavePassphrase() string {
+	choice, _, err := gochoice.Pick(
+		"Do you want to save your passphrase?",
+		[]string{
+			"Yes",
+			"No",
+		},
+		gochoice.OptionBackgroundColor(gochoice.Black),
+		gochoice.OptionTextColor(gochoice.White),
+		gochoice.OptionSelectedTextColor(gochoice.Red),
+		gochoice.OptionSelectedTextBold(),
+	)
+	if err != nil {
+		return "No"
+	}
+
+	return choice
 }
