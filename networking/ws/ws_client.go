@@ -18,6 +18,7 @@ type Client struct {
 	hub  *Hub
 	conn *websocket.Conn
 	send chan []byte
+	ip   string
 }
 
 // readPump pumps messages from the websocket connection to the hub.
@@ -37,7 +38,7 @@ func (c *Client) readPump() {
 		_, message, err := c.conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				fmt.Printf("error: %v", err)
+				fmt.Printf("Connection to server lost (readPump): %v\n", err)
 			}
 			break
 		}
@@ -86,6 +87,7 @@ func (c *Client) writePump() {
 		case <-ticker.C:
 			c.conn.SetWriteDeadline(time.Now().Add(WRITE_WAIT))
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				fmt.Printf("Connection to server lost (writePump/ping): %v\n", err)
 				return
 			}
 		}

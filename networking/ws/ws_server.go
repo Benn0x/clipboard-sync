@@ -36,10 +36,19 @@ func (h *Hub) run() {
 	for {
 		select {
 		case client := <-h.register:
+			ip, _, err := net.SplitHostPort(client.conn.RemoteAddr().String())
+			if err != nil {
+				client.conn.Close()
+				fmt.Printf("Client dropped, couldn't get IP. Error:  %v\n", err)
+				continue
+			}
+			client.ip = ip
 			h.clients[client] = true
-			fmt.Println("New client connected to the websocket.")
+			fmt.Printf("New client connected to the websocket. Client ip: %s\n", ip)
 		case client := <-h.unregister:
 			if _, ok := h.clients[client]; ok {
+				fmt.Printf("Client disconnected from the websocket. Client ip: %s\n", client.ip)
+
 				delete(h.clients, client)
 				close(client.send)
 			}
@@ -155,6 +164,7 @@ func StartWebsocketServer() {
 			return
 		}
 	})
+	fmt.Println("Device now available for client connections.")
 	err := http.ListenAndServe(WS_ADDR, nil)
 	if err != nil {
 		fmt.Println(fmt.Errorf("ListenAndServer: %v", err))

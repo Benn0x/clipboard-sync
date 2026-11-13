@@ -28,8 +28,7 @@ func main() {
 		fmt.Println("This device is already running this software.")
 		return
 	} else if err != nil {
-		fmt.Println(err)
-		fmt.Println("We couldn't verify whether or not your device is already running this software.")
+		fmt.Printf("We couldn't verify whether or not your device is already running this software. Err: %v\n", err)
 		return
 	}
 
@@ -39,6 +38,10 @@ func main() {
 		return
 	}
 	defer server.Shutdown()
+
+	if host {
+		fmt.Println("Your device is the host. The passphrase used MUST be given to client devices for connection.")
+	}
 
 	security.Setup()
 
