@@ -74,10 +74,8 @@ func ConnectToWS(ip string) error {
 		for {
 			messageType, message, err := conn.ReadMessage()
 			if err != nil {
-				fmt.Println(err)
-
 				if closeErr, ok := err.(*websocket.CloseError); ok {
-					fmt.Println(fmt.Errorf("Connection closed with code %d: %s", closeErr.Code, closeErr.Text))
+					panic(fmt.Errorf("Connection closed with code %d: %s", closeErr.Code, closeErr.Text))
 				}
 			} else if messageType == websocket.TextMessage {
 				security.Decrypt <- message
